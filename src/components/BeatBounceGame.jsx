@@ -21,13 +21,14 @@ export default function BeatBounceGame({ onUnlock }) {
   });
 
   useEffect(() => {
-    // Lazy-load audio only after mount
     audio.current = new Audio(beat1);
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return; // 🛡️ Prevent null access
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;    // 🛡️ Prevent null context
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
