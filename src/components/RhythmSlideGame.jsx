@@ -3,14 +3,14 @@ import { unlockTrack } from '../utils/unlock';
 import beat9 from '../assets/beat9.mp3';
 
 const LANES = ['red', 'blue', 'green', 'yellow'];
-const NOTE_SPEED = 3; // pixels per frame
+const NOTE_SPEED = 3;
 const CANVAS_WIDTH = 300;
 const CANVAS_HEIGHT = 500;
 const NOTE_SIZE = 40;
 const MAX_SCORE = 20;
 const MAX_MISSES = 5;
 const HIT_ZONE_Y = CANVAS_HEIGHT - NOTE_SIZE * 2;
-const HIT_WINDOW = 40; // pixels within hit zone to count as hit
+const HIT_WINDOW = 40;
 
 function getLaneX(index) {
   return (CANVAS_WIDTH / LANES.length) * index + (CANVAS_WIDTH / LANES.length) / 2 - NOTE_SIZE / 2;
@@ -31,26 +31,6 @@ export default function RhythmSlideGame({ onUnlock }) {
   const spawnNote = () => {
     const lane = Math.floor(Math.random() * LANES.length);
     setNotes((prev) => [...prev, { lane, y: -NOTE_SIZE }]);
-  };
-
-  const startGame = () => {
-    setGameStarted(true);
-    setScore(0);
-    setMisses(0);
-    setNotes([]);
-    setLastNoteTime(Date.now());
-    audio.current.play();
-  };
-
-  const resetGame = () => {
-    setGameStarted(false);
-    setGameOver(false);
-    setWin(false);
-    setNotes([]);
-    setScore(0);
-    setMisses(0);
-    audio.current.pause();
-    audio.current.currentTime = 0;
   };
 
   const update = () => {
@@ -80,14 +60,12 @@ export default function RhythmSlideGame({ onUnlock }) {
     const ctx = canvasRef.current.getContext('2d');
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw lanes
     LANES.forEach((color, i) => {
       ctx.fillStyle = color;
       const x = (CANVAS_WIDTH / LANES.length) * i;
       ctx.fillRect(x, 0, CANVAS_WIDTH / LANES.length, CANVAS_HEIGHT);
     });
 
-    // Draw hit zone line
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -95,7 +73,6 @@ export default function RhythmSlideGame({ onUnlock }) {
     ctx.lineTo(CANVAS_WIDTH, HIT_ZONE_Y + NOTE_SIZE);
     ctx.stroke();
 
-    // Draw notes
     notes.forEach((note) => {
       ctx.fillStyle = LANES[note.lane];
       const x = getLaneX(note.lane);
@@ -104,7 +81,6 @@ export default function RhythmSlideGame({ onUnlock }) {
       ctx.fill();
     });
 
-    // Draw score & misses
     ctx.fillStyle = '#fff';
     ctx.font = '18px Arial';
     ctx.fillText(`Score: ${score}`, 10, 20);
@@ -113,7 +89,6 @@ export default function RhythmSlideGame({ onUnlock }) {
 
   const gameLoop = () => {
     if (!gameStarted || gameOver || win) return;
-
     const now = Date.now();
     if (now - lastNoteTime > 1000) {
       spawnNote();
@@ -121,7 +96,6 @@ export default function RhythmSlideGame({ onUnlock }) {
     }
     update();
     draw();
-
     animationId.current = requestAnimationFrame(gameLoop);
   };
 
@@ -142,13 +116,10 @@ export default function RhythmSlideGame({ onUnlock }) {
 
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
-    // Determine which lane was tapped
     const laneWidth = CANVAS_WIDTH / LANES.length;
     const tappedLane = Math.floor(x / laneWidth);
 
-    // Find a note in that lane near the hit zone
     const noteIndex = notes.findIndex(
       (note) =>
         note.lane === tappedLane &&
@@ -186,6 +157,17 @@ export default function RhythmSlideGame({ onUnlock }) {
     }
   };
 
+  const resetGame = () => {
+    setGameStarted(false);
+    setGameOver(false);
+    setWin(false);
+    setNotes([]);
+    setScore(0);
+    setMisses(0);
+    audio.current.pause();
+    audio.current.currentTime = 0;
+  };
+
   return (
     <div>
       {!gameStarted && !gameOver && !win && (
@@ -196,13 +178,13 @@ export default function RhythmSlideGame({ onUnlock }) {
       {gameOver && (
         <div className="centered">
           <p>Game Over! Too many misses.</p>
-          <button onClick={() => resetGame()}>Try Again</button>
+          <button onClick={resetGame}>Try Again</button>
         </div>
       )}
       {win && (
         <div className="centered">
           <p>🎉 You Unlocked Track 9!</p>
-          <button onClick={() => resetGame()}>Play Again</button>
+          <button onClick={resetGame}>Play Again</button>
         </div>
       )}
       <canvas
@@ -215,15 +197,4 @@ export default function RhythmSlideGame({ onUnlock }) {
       />
     </div>
   );
-
-  function resetGame() {
-    setGameStarted(false);
-    setGameOver(false);
-    setWin(false);
-    setNotes([]);
-    setScore(0);
-    setMisses(0);
-    audio.current.pause();
-    audio.current.currentTime = 0;
-  }
 }
