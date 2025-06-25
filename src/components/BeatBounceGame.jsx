@@ -4,9 +4,12 @@ import beat1 from '../assets/beat1.mp3';
 
 export default function BeatBounceGame({ onUnlock }) {
   const canvasRef = useRef(null);
+  const audio = useRef(null);
+  const animationFrameId = useRef(null);
+
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [audio] = useState(new Audio(beat1));
+
   const gravity = 0.5;
   const bounce = -10;
 
@@ -18,9 +21,13 @@ export default function BeatBounceGame({ onUnlock }) {
   });
 
   useEffect(() => {
+    // Lazy-load audio only after mount
+    audio.current = new Audio(beat1);
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -42,28 +49,28 @@ export default function BeatBounceGame({ onUnlock }) {
         ball.current.vy = bounce;
       }
 
-      // Game over if falls off screen
+      // Game over if ball falls off screen
       if (ball.current.y > canvas.height + 50) {
         setGameOver(true);
-        audio.pause();
-        cancelAnimationFrame(animationFrameId);
+        audio.current?.pause();
+        cancelAnimationFrame(animationFrameId.current);
         return;
       }
 
-      animationFrameId = requestAnimationFrame(draw);
+      animationFrameId.current = requestAnimationFrame(draw);
     };
 
     if (gameStarted && !gameOver) {
-      draw();
+      animationFrameId.current = requestAnimationFrame(draw);
     }
 
-    return () => cancelAnimationFrame(animationFrameId);
+    return () => cancelAnimationFrame(animationFrameId.current);
   }, [gameStarted, gameOver]);
 
   const handleTap = () => {
     if (!gameStarted) {
       setGameStarted(true);
-      audio.play();
+      audio.current?.play();
     }
     ball.current.vy = bounce;
   };
@@ -76,9 +83,9 @@ export default function BeatBounceGame({ onUnlock }) {
   };
 
   const handleWin = () => {
-    unlockTrack(1); // 🔐 Unlock track #1 (centralized logic)
-    audio.pause();
-    onUnlock?.();   // 🔁 Refresh playlist in UI
+    unlockTrack(1);
+    audio.current?.pause();
+    onUnlock?.();
     setGameOver(true);
   };
 
@@ -104,8 +111,9 @@ export default function BeatBounceGame({ onUnlock }) {
             height={500}
             style={{ width: '100%', background: '#111', touchAction: 'manipulation' }}
           />
-          {/* Temporary win trigger for testing */}
-          <button onClick={handleWin} style={{ position: 'absolute', bottom: 20 }}>✔️ Dev Win</button>
+          <button onClick={handleWin} style={{ position: 'absolute', bottom: 20 }}>
+            ✔️ Dev Win
+          </button>
         </div>
       )}
     </div>
