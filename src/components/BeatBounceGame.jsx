@@ -7,8 +7,11 @@ export default function BeatBounceGame({ onUnlock }) {
   const canvasRef = useRef(null);
   const audio = useRef(null);
   const animationFrameId = useRef(null);
+
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
+  const [win, setWin] = useState(false);
+
   const gravity = 0.5;
   const bounce = -10;
 
@@ -33,7 +36,7 @@ export default function BeatBounceGame({ onUnlock }) {
       ctx.fillStyle = '#111';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Neon ball
+      // Neon glowing ball
       ctx.shadowBlur = 20;
       ctx.shadowColor = '#39ff14';
       ctx.fillStyle = '#39ff14';
@@ -60,23 +63,23 @@ export default function BeatBounceGame({ onUnlock }) {
       animationFrameId.current = requestAnimationFrame(draw);
     };
 
-    if (gameStarted && !gameOver) {
+    if (gameStarted && !gameOver && !win) {
       animationFrameId.current = requestAnimationFrame(draw);
     }
 
     return () => cancelAnimationFrame(animationFrameId.current);
-  }, [gameStarted, gameOver]);
+  }, [gameStarted, gameOver, win]);
 
   // 🏆 Win after 30 seconds
   useEffect(() => {
-    if (gameStarted && !gameOver) {
-      const winTimeout = setTimeout(() => {
+    if (gameStarted && !gameOver && !win) {
+      const timeout = setTimeout(() => {
         handleWin();
-      }, 30000); // 30 seconds
+      }, 30000);
 
-      return () => clearTimeout(winTimeout);
+      return () => clearTimeout(timeout);
     }
-  }, [gameStarted, gameOver]);
+  }, [gameStarted, gameOver, win]);
 
   const handleTap = () => {
     if (!gameStarted) {
@@ -88,22 +91,27 @@ export default function BeatBounceGame({ onUnlock }) {
 
   const handleReset = () => {
     setGameOver(false);
+    setGameStarted(false);
+    setWin(false);
     ball.current.y = 150;
     ball.current.vy = 0;
-    setGameStarted(false);
   };
 
   const handleWin = () => {
     unlockTrack(1);
     audio.current?.pause();
+    setWin(true);
+    setGameStarted(false);
+  };
+
+  const handleNext = () => {
     onUnlock?.();
-    setGameOver(true);
   };
 
   return (
     <ArcadeLayout
       gameNumber={1}
-      instructions="Tap the screen to keep the ball bouncing. Survive for 30 seconds to unlock the track!"
+      instructions="Tap to keep the ball bouncing. Survive 30 seconds to unlock the track!"
       onStart={() => setGameStarted(true)}
       started={gameStarted}
     >
@@ -121,14 +129,30 @@ export default function BeatBounceGame({ onUnlock }) {
         }}
       />
 
+      {/* Game Over Message */}
       {gameOver && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20">
-          <p className="text-xl mb-4">💀 Game Over!</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20 px-4">
+          <p className="text-2xl mb-4">💀 Game Over</p>
+          <p className="mb-4 text-sm text-gray-300">Try again to unlock the track.</p>
           <button
             onClick={handleReset}
             className="bg-neon-pink text-black font-bold py-2 px-6 rounded-xl hover:bg-white transition"
           >
             Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Win Message */}
+      {win && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20 px-4">
+          <p className="text-2xl mb-4">🎉 You Unlocked Track 1!</p>
+          <p className="mb-4 text-sm text-gray-300">The song is now active in your music player.</p>
+          <button
+            onClick={handleNext}
+            className="bg-neon-green text-black font-bold py-2 px-6 rounded-xl hover:bg-white transition"
+          >
+            Next Game →
           </button>
         </div>
       )}
