@@ -1,39 +1,30 @@
 import React from 'react';
 
-export default function ArcadeLayout({ children, gameNumber, onStart, instructions, started }) {
+export default function ArcadeLayout({ children, gameNumber, instructions, onStart, started }) {
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4 pt-6 pb-20 relative">
       {/* Top HUD */}
-      <div className="absolute top-4 w-full flex justify-between items-center px-6 z-10">
-        <h1 className="text-2xl font-bold tracking-wide text-neon-green">FREE LIPH ARCADE</h1>
-        <p className="text-lg text-gray-300">Game {gameNumber}/10</p>
+      <div className="w-full max-w-md bg-[#111] border border-[#39ff14] rounded-2xl px-4 py-3 mb-4 shadow-md flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-[#39ff14] font-mono">Game {gameNumber}/10</span>
+          {!started && (
+            <button
+              onClick={onStart}
+              className="bg-[#39ff14] hover:bg-white text-black font-bold text-xs px-3 py-1 rounded-md transition"
+            >
+              ▶ Play
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-300 leading-snug font-light">
+          {instructions}
+        </p>
       </div>
 
-      {/* Canvas/Game Frame */}
-      <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-neon-blue w-full max-w-md aspect-[3/5] bg-[#111]">
+      {/* Game Canvas */}
+      <div className="w-full max-w-md aspect-[3/5] rounded-2xl overflow-hidden shadow-lg relative">
         {children}
       </div>
-
-      {/* Instructions Overlay */}
-      {!started && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm px-4 text-center z-20">
-          <h2 className="text-xl font-semibold mb-4">How to Play</h2>
-          <p className="mb-6 text-gray-300 text-sm max-w-sm">{instructions}</p>
-          <button
-            onClick={onStart}
-            className="bg-neon-pink text-black font-bold py-2 px-6 rounded-xl hover:bg-white transition"
-          >
-            Start Game
-          </button>
-        </div>
-      )}
-
-      {/* Styles for neon colors */}
-      <style jsx global>{`
-        .text-neon-green { color: #39ff14; }
-        .border-neon-blue { border-color: #00f0ff; }
-        .bg-neon-pink { background-color: #ff00c8; }
-      `}</style>
     </div>
   );
 }
