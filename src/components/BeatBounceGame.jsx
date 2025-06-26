@@ -1,16 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { unlockTrack } from '../utils/unlock';
 import beat1 from '../assets/beat1.mp3';
-import ArcadeLayout from './ArcadeLayout'; // ✅ import the shared layout
+import ArcadeLayout from './ArcadeLayout';
 
 export default function BeatBounceGame({ onUnlock }) {
   const canvasRef = useRef(null);
   const audio = useRef(null);
   const animationFrameId = useRef(null);
-
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-
   const gravity = 0.5;
   const bounce = -10;
 
@@ -35,7 +33,7 @@ export default function BeatBounceGame({ onUnlock }) {
       ctx.fillStyle = '#111';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Neon glowing ball
+      // Neon ball
       ctx.shadowBlur = 20;
       ctx.shadowColor = '#39ff14';
       ctx.fillStyle = '#39ff14';
@@ -69,6 +67,17 @@ export default function BeatBounceGame({ onUnlock }) {
     return () => cancelAnimationFrame(animationFrameId.current);
   }, [gameStarted, gameOver]);
 
+  // 🏆 Win after 30 seconds
+  useEffect(() => {
+    if (gameStarted && !gameOver) {
+      const winTimeout = setTimeout(() => {
+        handleWin();
+      }, 30000); // 30 seconds
+
+      return () => clearTimeout(winTimeout);
+    }
+  }, [gameStarted, gameOver]);
+
   const handleTap = () => {
     if (!gameStarted) {
       setGameStarted(true);
@@ -94,7 +103,7 @@ export default function BeatBounceGame({ onUnlock }) {
   return (
     <ArcadeLayout
       gameNumber={1}
-      instructions="Tap the screen to keep the ball bouncing. Don't let it fall off the bottom!"
+      instructions="Tap the screen to keep the ball bouncing. Survive for 30 seconds to unlock the track!"
       onStart={() => setGameStarted(true)}
       started={gameStarted}
     >
@@ -111,27 +120,6 @@ export default function BeatBounceGame({ onUnlock }) {
           borderRadius: '16px'
         }}
       />
-
-      {/* Optional Dev Button */}
-      {gameStarted && !gameOver && (
-        <button
-          onClick={handleWin}
-          style={{
-            position: 'absolute',
-            bottom: 10,
-            right: 10,
-            background: '#ff00c8',
-            color: '#000',
-            fontWeight: 'bold',
-            borderRadius: '10px',
-            padding: '6px 12px',
-            fontSize: '0.8rem',
-            zIndex: 20
-          }}
-        >
-          ✔ Dev Win
-        </button>
-      )}
 
       {gameOver && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20">
