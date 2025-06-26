@@ -7,6 +7,7 @@ export default function BeatBounceGame({ onUnlock }) {
   const canvasRef = useRef(null);
   const audio = useRef(null);
   const animationFrameId = useRef(null);
+  const lastTapRef = useRef(Date.now());
 
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
@@ -19,7 +20,7 @@ export default function BeatBounceGame({ onUnlock }) {
     x: 150,
     y: 150,
     vy: 0,
-    radius: 20
+    radius: 20,
   });
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function BeatBounceGame({ onUnlock }) {
       ctx.fillStyle = '#111';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Neon glowing ball
+      // Draw glowing ball
       ctx.shadowBlur = 20;
       ctx.shadowColor = '#39ff14';
       ctx.fillStyle = '#39ff14';
@@ -45,18 +46,24 @@ export default function BeatBounceGame({ onUnlock }) {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Physics
+      // Apply gravity and bounce
       ball.current.vy += gravity;
       ball.current.y += ball.current.vy;
 
+      // Bounce logic
       if (ball.current.y + ball.current.radius > canvas.height) {
         ball.current.vy = bounce;
       }
 
+      // Lose if ball falls off bottom
       if (ball.current.y > canvas.height + 50) {
-        setGameOver(true);
-        audio.current?.pause();
-        cancelAnimationFrame(animationFrameId.current);
+        handleGameOver();
+        return;
+      }
+
+      // Check tap timeout (player must interact)
+      if (Date.now() - lastTapRef.current > 2000) {
+        handleGameOver();
         return;
       }
 
@@ -70,13 +77,11 @@ export default function BeatBounceGame({ onUnlock }) {
     return () => cancelAnimationFrame(animationFrameId.current);
   }, [gameStarted, gameOver, win]);
 
-  // 🏆 Win after 30 seconds
   useEffect(() => {
     if (gameStarted && !gameOver && !win) {
       const timeout = setTimeout(() => {
         handleWin();
       }, 30000);
-
       return () => clearTimeout(timeout);
     }
   }, [gameStarted, gameOver, win]);
@@ -87,6 +92,7 @@ export default function BeatBounceGame({ onUnlock }) {
       audio.current?.play();
     }
     ball.current.vy = bounce;
+    lastTapRef.current = Date.now();
   };
 
   const handleReset = () => {
@@ -95,13 +101,21 @@ export default function BeatBounceGame({ onUnlock }) {
     setWin(false);
     ball.current.y = 150;
     ball.current.vy = 0;
+    lastTapRef.current = Date.now();
+  };
+
+  const handleGameOver = () => {
+    setGameOver(true);
+    setGameStarted(false);
+    audio.current?.pause();
+    cancelAnimationFrame(animationFrameId.current);
   };
 
   const handleWin = () => {
     unlockTrack(1);
-    audio.current?.pause();
     setWin(true);
     setGameStarted(false);
+    audio.current?.pause();
   };
 
   const handleNext = () => {
@@ -111,25 +125,25 @@ export default function BeatBounceGame({ onUnlock }) {
   return (
     <ArcadeLayout
       gameNumber={1}
-      instructions="Tap to keep the ball bouncing. Survive 30 seconds to unlock the track!"
-      onStart={() => setGameStarted(true)}
-      started={gameStarted}
+      instructions="Tap to keep the ball bouncing. If it drops or you stop tapping for too long, you lose!"
+      onStart={handleReset}
+      started={gameStarted || gameOver || win}
     >
       <canvas
         ref={canvasRef}
         onClick={handleTap}
         width={300}
-        height={500}
+        height={450}
         style={{
           width: '100%',
           height: '100%',
           touchAction: 'manipulation',
           background: '#111',
-          borderRadius: '16px'
+          borderRadius: '16px',
         }}
       />
 
-      {/* Game Over Message */}
+      {/* Game Over Overlay */}
       {gameOver && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20 px-4">
           <p className="text-2xl mb-4">💀 Game Over</p>
@@ -143,7 +157,7 @@ export default function BeatBounceGame({ onUnlock }) {
         </div>
       )}
 
-      {/* Win Message */}
+      {/* Win Overlay */}
       {win && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20 px-4">
           <p className="text-2xl mb-4">🎉 You Unlocked Track 1!</p>
