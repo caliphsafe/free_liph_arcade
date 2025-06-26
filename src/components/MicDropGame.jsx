@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { unlockTrack } from '../utils/unlock';
 import beat2 from '../assets/beat2.mp3';
+import ArcadeLayout from './ArcadeLayout';
 
 export default function MicDropGame({ onUnlock }) {
   const canvasRef = useRef(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [win, setWin] = useState(false);
-  const [audio] = useState(new Audio(beat2));
+  const audio = useRef(null);
   const player = useRef({ x: 140, y: 450, size: 20 });
   const mics = useRef([]);
   const notes = useRef([]);
@@ -35,26 +36,29 @@ export default function MicDropGame({ onUnlock }) {
   };
 
   useEffect(() => {
+    audio.current = new Audio(beat2);
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let animationId;
 
     const loop = () => {
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = '#111';
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-      // Draw player
-      ctx.fillStyle = '#0f0';
+      // Player
+      ctx.fillStyle = '#39ff14';
       ctx.fillRect(player.current.x, player.current.y, player.current.size, player.current.size);
 
-      // Draw mics
-      ctx.fillStyle = '#f00';
+      // Mics
+      ctx.fillStyle = '#ff0055';
       mics.current.forEach((mic) => {
         mic.y += 4;
         ctx.fillRect(mic.x, mic.y, mic.size, mic.size);
 
-        // Collision
         if (
           mic.x < player.current.x + player.current.size &&
           mic.x + mic.size > player.current.x &&
@@ -62,14 +66,14 @@ export default function MicDropGame({ onUnlock }) {
           mic.y + mic.size > player.current.y
         ) {
           setGameOver(true);
-          audio.pause();
-          return cancelAnimationFrame(animationId);
+          audio.current?.pause();
+          cancelAnimationFrame(animationId);
         }
       });
 
-      // Draw notes
-      ctx.fillStyle = '#0ff';
-      notes.current.forEach((note, index) => {
+      // Notes
+      ctx.fillStyle = '#00f0ff';
+      notes.current.forEach((note, i) => {
         note.y += 2;
         ctx.fillRect(note.x, note.y, note.size, note.size);
 
@@ -79,30 +83,30 @@ export default function MicDropGame({ onUnlock }) {
           note.y < player.current.y + player.current.size &&
           note.y + note.size > player.current.y
         ) {
-          notes.current.splice(index, 1);
-          setScore((prev) => prev + 1);
+          notes.current.splice(i, 1);
+          setScore((s) => s + 1);
         }
       });
 
-      // Win condition
-      const timePassed = Date.now() - startTime.current;
-      if (timePassed >= 30000) {
+      const elapsed = Date.now() - startTime.current;
+      if (elapsed >= 30000) {
         unlockTrack(2);
-        onUnlock?.();
+        audio.current?.pause();
         setWin(true);
-        audio.pause();
-        return cancelAnimationFrame(animationId);
+        onUnlock?.();
+        cancelAnimationFrame(animationId);
+        return;
       }
 
       animationId = requestAnimationFrame(loop);
     };
 
     if (gameStarted && !gameOver && !win) {
-      startTime.current = Date.now();
       mics.current = [];
       notes.current = [];
       player.current = { x: 140, y: 450, size: 20 };
       setScore(0);
+      startTime.current = Date.now();
       loop();
       const micSpawner = setInterval(spawnMic, 1000);
       const noteSpawner = setInterval(spawnNote, 1500);
@@ -117,7 +121,7 @@ export default function MicDropGame({ onUnlock }) {
 
   const handleStart = () => {
     setGameStarted(true);
-    audio.play();
+    audio.current?.play();
   };
 
   const handleReset = () => {
@@ -130,35 +134,23 @@ export default function MicDropGame({ onUnlock }) {
   const handleSwipe = (e) => {
     const x = e.changedTouches[0].clientX;
     const startX = e.target.dataset.startx;
-    const direction = x - startX > 0 ? 'right' : 'left';
-    handleMove(direction);
+    const dir = x - startX > 0 ? 'right' : 'left';
+    handleMove(dir);
   };
 
   return (
-    <div>
-      {!gameStarted && !gameOver && !win && (
-        <div className="centered">
-          <button onClick={handleStart}>Start Game</button>
-        </div>
-      )}
-      {gameOver && (
-        <div className="centered">
-          <p>Game Over!</p>
-          <button onClick={handleReset}>Try Again</button>
-        </div>
-      )}
-      {win && (
-        <div className="centered">
-          <p>🔥 You Unlocked Track 2!</p>
-          <button onClick={handleReset}>Play Again</button>
-        </div>
-      )}
+    <ArcadeLayout
+      gameNumber={2}
+      instructions="Dodge the falling mics and collect glowing notes to score. Survive for 30 seconds to unlock the track."
+      onStart={handleStart}
+      started={gameStarted}
+    >
       <canvas
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
-        style={{ width: '100%', touchAction: 'none' }}
-        onTouchStart={(e) => e.target.dataset.startx = e.touches[0].clientX}
+        style={{ width: '100%', height: '100%', touchAction: 'none', borderRadius: '16px' }}
+        onTouchStart={(e) => (e.target.dataset.startx = e.touches[0].clientX)}
         onTouchEnd={handleSwipe}
         onClick={(e) => {
           const rect = e.target.getBoundingClientRect();
@@ -166,7 +158,34 @@ export default function MicDropGame({ onUnlock }) {
           handleMove(x < rect.width / 2 ? 'left' : 'right');
         }}
       />
-      <p style={{ color: '#fff', textAlign: 'center' }}>Score: {score}</p>
-    </div>
+
+      <p style={{ position: 'absolute', top: 10, right: 10, color: '#ccc', fontSize: '0.8rem' }}>
+        Score: {score}
+      </p>
+
+      {gameOver && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20">
+          <p className="text-xl mb-4">💀 Game Over!</p>
+          <button
+            onClick={handleReset}
+            className="bg-neon-pink text-black font-bold py-2 px-6 rounded-xl hover:bg-white transition"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {win && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center z-20">
+          <p className="text-xl mb-4">🔥 You Unlocked Track 2!</p>
+          <button
+            onClick={handleReset}
+            className="bg-neon-pink text-black font-bold py-2 px-6 rounded-xl hover:bg-white transition"
+          >
+            Play Again
+          </button>
+        </div>
+      )}
+    </ArcadeLayout>
   );
 }
